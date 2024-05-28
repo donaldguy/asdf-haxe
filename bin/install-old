@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+BIN_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+source ${BIN_DI}/../lib/utils.sh
+
+version=$1
+os=$2
+arch=$3
+install_path=$4
+
+case version_endpoints_compare "$version" "<=3.0.0" ">=3.1.2" ">=3.4.3" in 
+  "<=3.0.0")
+    case "$arch" in
+      "64")
+        echo "WARNING: back before 3.0 everything was 32 bit." >&2
+        echo "         Your 64 bit operating system may or may not be able to deal." >&2
+        ;;
+      "32") : ;;
+      *) fail_arch_unknown ;; 
+    esac
+  
+    install_from_github "v{$version}" "${os}" "$install_path" "v"
+    ;;
+  "other")
+    case "$os" in 
+      "linux")
+        case "$arch" in
+          "64"|"32") : ;; 
+          "raspi") 
+            if [[ "$version" != "3.1.1" ]]; then fail_arch_unknown; fi ;;
+          *) fail_arch_unknown ;;
+        esac
+        install_from_github "v${version}" "${os}${arch}" "$install_path"
+      "osx")
+        if [[ "$arch" == "32" ]]; then fail_arch_late_32; fi ;;
+    esac
+        
+    install_from_github "v${version}" "${os}" "$install_path"
+    ;;
+  ">=3.1.2")
+    #they stopped prefixing release tags with "v"
+    if [[ "$os" = "linux "]]; then
+        install_from_github "${version}" "${os}${arch}" "$install_path"
+    elif [[ "$os" = "osx" ]] && [[ "$arch" = "32" ]]; then
+      fail_arch_late_32
+    elif [[ "$arch" = "raspi" ]] && [[ "$version" != "3.1.2" ]] && [[ "$version" != "3.1.3" ]]; then 
+        fail_arch_unknown
+    fi
+      
+    install_from_github "$version" "${os}" "$install_path"
+    ;;
+  ">=3.4.3")
+    if [[ "$os" = "win" ]] && [[ "$arch" = "64" ]] && ( [[ "$version" = "3.4.3" ]] || [[ "$version" = "4.0.0-preview1" ]]); then
+      echo "WARNING: windows 64 bit binaries did not start shipping til 3.4.4" >&2
+    fi
+
+    standard_x86_install
+    ;;
+esac

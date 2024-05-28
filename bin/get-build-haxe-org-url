@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+BASE_URL="https://build.haxe.org/builds/haxe"
+DIR=$1
+TAG=$2
+OVERRIDE_COMMIT="${3:-}"
+
+'{"query":"fragment TarballNameFields on Commit {the_oid: abbreviatedOid, the_datetime: committedDate, associatedPullRequests(first: 1) {edges { node {the_branch: baseRefName } } }},'
+'query {repository(owner: \"HaxeFoundation\", name: \"haxe\") {release(tagName: \"'"$TAG"'\") {tagCommit {...TarballNameFields}}}}"}
+
+if [[ -z "$OVERRIDE_COMMIT" ]]; then
